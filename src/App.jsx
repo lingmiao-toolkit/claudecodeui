@@ -46,6 +46,7 @@ function AppContent() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'files'
+  const [config, setConfig] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
@@ -88,7 +89,8 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Fetch projects on component mount
+    // Fetch config and projects on component mount
+    fetchConfig();
     fetchProjects();
   }, []);
 
@@ -186,6 +188,30 @@ function AppContent() {
     }
   }, [messages, selectedProject, selectedSession, activeSessions]);
 
+  const fetchConfig = async () => {
+    try {
+      console.log('🔍 [DEBUG] Fetching config from server...');
+      const response = await api.config();
+      const configData = await response.json();
+      console.log('📥 [DEBUG] Received config from server:', configData);
+      setConfig(configData);
+      
+      // Handle CCUI_DEFAULT_SHELL
+      if (configData.defaultShell && !activeTab) {
+        console.log('🐚 [DEBUG] CCUI_DEFAULT_SHELL is true, switching to shell tab');
+        setActiveTab('shell');
+      } else {
+        console.log('🐚 [DEBUG] CCUI_DEFAULT_SHELL check:', {
+          defaultShell: configData.defaultShell,
+          activeTab: activeTab,
+          willSwitchToShell: configData.defaultShell && !activeTab
+        });
+      }
+    } catch (error) {
+      console.error('❌ [DEBUG] Error fetching config:', error);
+    }
+  };
+
   const fetchProjects = async () => {
     try {
       setIsLoadingProjects(true);
@@ -253,6 +279,41 @@ function AppContent() {
       // Don't redirect to home, let the session load naturally
     }
   }, [sessionId, projects, navigate]);
+
+  // Handle CCUI_WORK_DIR auto-selection
+  useEffect(() => {
+    console.log('🔍 [DEBUG] CCUI_WORK_DIR auto-selection check:', {
+      hasConfig: !!config,
+      workDir: config?.workDir,
+      projectsCount: projects.length,
+      hasSelectedProject: !!selectedProject
+    });
+    
+    if (config && config.workDir && projects.length > 0 && !selectedProject) {
+      console.log('🏠 [DEBUG] Looking for work directory project:', config.workDir);
+      console.log('📁 [DEBUG] Available projects:', projects.map(p => ({ name: p.name, path: p.path, fullPath: p.fullPath })));
+      
+      // Find the project that matches the work directory
+      const workDirProject = projects.find(project => 
+        project.fullPath === config.workDir || 
+        project.path === config.workDir
+      );
+      
+      if (workDirProject) {
+        console.log('✅ [DEBUG] Found matching work directory project:', workDirProject.displayName);
+        console.log('🏠 Auto-selecting work directory project:', workDirProject.displayName);
+        setSelectedProject(workDirProject);
+        
+        // Handle CCUI_DEFAULT_SHELL: switch to shell tab if enabled
+        if (config.defaultShell) {
+          console.log('🐚 [DEBUG] Also switching to shell tab due to CCUI_DEFAULT_SHELL');
+          setActiveTab('shell');
+        }
+      } else {
+        console.log('❌ [DEBUG] No matching project found for work directory:', config.workDir);
+      }
+    }
+  }, [config, projects, selectedProject]);
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
@@ -518,6 +579,7 @@ function AppContent() {
               latestVersion={latestVersion}
               currentVersion={currentVersion}
               onShowVersionModal={() => setShowVersionModal(true)}
+              config={config}
             />
           </div>
         </div>
@@ -563,6 +625,7 @@ function AppContent() {
               latestVersion={latestVersion}
               currentVersion={currentVersion}
               onShowVersionModal={() => setShowVersionModal(true)}
+              config={config}
             />
           </div>
         </div>
@@ -591,6 +654,7 @@ function AppContent() {
           showRawParameters={showRawParameters}
           autoScrollToBottom={autoScrollToBottom}
           sendByCtrlEnter={sendByCtrlEnter}
+          config={config}
         />
       </div>
 

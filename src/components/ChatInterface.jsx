@@ -1098,7 +1098,7 @@ const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
 // - onReplaceTemporarySession: Called to replace temporary session ID with real WebSocket session ID
 //
 // This ensures uninterrupted chat experience by pausing sidebar refreshes during conversations.
-function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter }) {
+function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter, config, activeTab }) {
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return safeLocalStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -1118,7 +1118,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [sessionMessages, setSessionMessages] = useState([]);
   const [isLoadingSessionMessages, setIsLoadingSessionMessages] = useState(false);
   const [isSystemSessionChange, setIsSystemSessionChange] = useState(false);
-  const [permissionMode, setPermissionMode] = useState('default');
+  const [permissionMode, setPermissionMode] = useState(() => {
+    // Set default permission mode based on config
+    return (config?.defaultShell && selectedProject) ? 'bypassPermissions' : 'default';
+  });
   const [attachedImages, setAttachedImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(new Map());
   const [imageErrors, setImageErrors] = useState(new Map());
@@ -1344,6 +1347,36 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       setIsUserScrolledUp(!nearBottom);
     }
   }, [isNearBottom]);
+
+  // Handle config changes for default shell mode and shell tab activation
+  useEffect(() => {
+    console.log('🔍 [DEBUG] ChatInterface config/project/tab change:', {
+      hasConfig: !!config,
+      defaultShell: config?.defaultShell,
+      hasSelectedProject: !!selectedProject,
+      activeTab: activeTab,
+      currentPermissionMode: permissionMode
+    });
+    
+    // Set bypass permissions if:
+    // 1. CCUI_DEFAULT_SHELL is enabled and we have a project, OR
+    // 2. User is currently on the shell tab
+    const shouldBypassPermissions = (config?.defaultShell && selectedProject) || (activeTab === 'shell');
+    
+    if (shouldBypassPermissions && permissionMode !== 'bypassPermissions') {
+      console.log('🛡️ [DEBUG] Setting permission mode to bypassPermissions due to:', {
+        defaultShellEnabled: config?.defaultShell && selectedProject,
+        onShellTab: activeTab === 'shell'
+      });
+      setPermissionMode('bypassPermissions');
+    } else if (!shouldBypassPermissions && permissionMode === 'bypassPermissions') {
+      // Reset to default when leaving shell context (unless CCUI_DEFAULT_SHELL is enabled)
+      if (!config?.defaultShell) {
+        console.log('🛡️ [DEBUG] Resetting permission mode to default (left shell context)');
+        setPermissionMode('default');
+      }
+    }
+  }, [config, selectedProject, activeTab, permissionMode]);
 
   useEffect(() => {
     // Load session messages when session changes

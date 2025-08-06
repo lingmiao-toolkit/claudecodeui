@@ -25,6 +25,14 @@ try {
 
 console.log('PORT from env:', process.env.PORT);
 
+// Debug: Print all CC-related environment variables at startup
+console.log('\n🔍 [DEBUG] CC Environment Variables at startup:');
+console.log('==================================================');
+console.log('CCUI_WORK_DIR:', process.env.CCUI_WORK_DIR || 'not set');
+console.log('CCUI_DEFAULT_SHELL:', process.env.CCUI_DEFAULT_SHELL || 'not set'); 
+console.log('CCUI_SINGLE_PROJECT:', process.env.CCUI_SINGLE_PROJECT || 'not set');
+console.log('==================================================\n');
+
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import http from 'http';
@@ -185,10 +193,21 @@ app.get('/api/config', authenticateToken, (req, res) => {
   
   console.log('Config API called - Returning host:', host, 'Protocol:', protocol);
   
-  res.json({
+  const config = {
     serverPort: PORT,
-    wsUrl: `${protocol}://${host}`
-  });
+    wsUrl: `${protocol}://${host}`,
+    workDir: process.env.CCUI_WORK_DIR || null,
+    defaultShell: process.env.CCUI_DEFAULT_SHELL === 'true',
+    singleProject: process.env.CCUI_SINGLE_PROJECT === 'true'
+  };
+  
+  console.log('🔍 [DEBUG] Environment variables status:');
+  console.log('  - CCUI_WORK_DIR:', process.env.CCUI_WORK_DIR || 'not set');
+  console.log('  - CCUI_DEFAULT_SHELL:', process.env.CCUI_DEFAULT_SHELL || 'not set');
+  console.log('  - CCUI_SINGLE_PROJECT:', process.env.CCUI_SINGLE_PROJECT || 'not set');
+  console.log('📤 [DEBUG] Sending config to client:', config);
+  
+  res.json(config);
 });
 
 app.get('/api/projects', authenticateToken, async (req, res) => {
@@ -987,6 +1006,9 @@ async function startServer() {
     await initializeDatabase();
     console.log('✅ Database initialization skipped (testing)');
     
+    // Handle CCUI_WORK_DIR environment variable
+    await handleCCUIWorkDir();
+    
     server.listen(PORT, '0.0.0.0', async () => {
       console.log(`Claude Code UI server running on http://0.0.0.0:${PORT}`);
       
@@ -996,6 +1018,49 @@ async function startServer() {
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
+  }
+}
+
+// Handle CCUI_WORK_DIR environment variable
+async function handleCCUIWorkDir() {
+  const workDir = process.env.CCUI_WORK_DIR;
+  console.log('🔍 [DEBUG] Checking CCUI_WORK_DIR:', workDir);
+  if (!workDir) {
+    console.log('ℹ️ [DEBUG] No CCUI_WORK_DIR specified');
+    return; // No work directory specified
+  }
+  
+  console.log('🏠 CCUI_WORK_DIR detected:', workDir);
+  
+  try {
+    // Check if directory exists, create if not
+    await fsPromises.access(workDir);
+    console.log('✅ Work directory exists:', workDir);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      try {
+        await fsPromises.mkdir(workDir, { recursive: true });
+        console.log('✅ Created work directory:', workDir);
+      } catch (createError) {
+        console.error('❌ Failed to create work directory:', createError);
+        return;
+      }
+    } else {
+      console.error('❌ Error accessing work directory:', error);
+      return;
+    }
+  }
+  
+  try {
+    // Add the work directory as a project if it's not already added
+    const project = await addProjectManually(workDir);
+    console.log('✅ Work directory added as project:', project.name);
+  } catch (error) {
+    if (error.message.includes('already exists') || error.message.includes('already configured')) {
+      console.log('ℹ️ Work directory already exists as project');
+    } else {
+      console.error('❌ Failed to add work directory as project:', error);
+    }
   }
 }
 

@@ -50,8 +50,13 @@ function Sidebar({
   updateAvailable,
   latestVersion,
   currentVersion,
-  onShowVersionModal
+  onShowVersionModal,
+  config
 }) {
+  // Debug log for config changes
+  React.useEffect(() => {
+    console.log('🔍 [DEBUG] Sidebar config updated:', config);
+  }, [config]);
   const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [editingProject, setEditingProject] = useState(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -449,9 +454,13 @@ function Sidebar({
             <Button
               variant="default"
               size="sm"
-              className="h-9 w-9 px-0 bg-primary hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md"
-              onClick={() => setShowNewProject(true)}
-              title="Create new project (Ctrl+N)"
+              className="h-9 w-9 px-0 bg-primary hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                console.log('🔍 [DEBUG] New project button clicked, singleProject:', config?.singleProject);
+                setShowNewProject(true);
+              }}
+              title={config?.singleProject ? "Project creation disabled" : "Create new project (Ctrl+N)"}
+              disabled={config?.singleProject}
             >
               <FolderPlus className="w-4 h-4" />
             </Button>
@@ -486,8 +495,10 @@ function Sidebar({
                 <RefreshCw className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
               <button
-                className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all duration-150"
+                className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setShowNewProject(true)}
+                disabled={config?.singleProject}
+                title={config?.singleProject ? "Project creation disabled" : "Create new project"}
               >
                 <FolderPlus className="w-4 h-4" />
               </button>

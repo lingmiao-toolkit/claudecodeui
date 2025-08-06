@@ -29,7 +29,7 @@ if (typeof document !== 'undefined') {
 // Global store for shell sessions to persist across tab switches
 const shellSessions = new Map();
 
-function Shell({ selectedProject, selectedSession, isActive }) {
+function Shell({ selectedProject, selectedSession, isActive, config }) {
   const terminalRef = useRef(null);
   const terminal = useRef(null);
   const fitAddon = useRef(null);
@@ -376,6 +376,27 @@ function Shell({ selectedProject, selectedSession, isActive }) {
       }
     }, 100);
   }, [isActive, isInitialized]);
+
+  // Auto-connect when CCUI_DEFAULT_SHELL is enabled
+  useEffect(() => {
+    console.log('🔍 [DEBUG] Shell auto-connect check:', {
+      hasConfig: !!config,
+      defaultShell: config?.defaultShell,
+      isActive: isActive,
+      hasSelectedProject: !!selectedProject,
+      isInitialized: isInitialized,
+      isConnected: isConnected,
+      isConnecting: isConnecting
+    });
+
+    if (config?.defaultShell && isActive && selectedProject && isInitialized && !isConnected && !isConnecting) {
+      console.log('🚀 [DEBUG] Auto-connecting to shell for project:', selectedProject.name);
+      // Add a small delay to ensure the tab is fully activated
+      setTimeout(() => {
+        connectToShell();
+      }, 500);
+    }
+  }, [config, isActive, selectedProject, isInitialized, isConnected, isConnecting]);
 
   // WebSocket connection function (called manually)
   const connectWebSocket = async () => {
