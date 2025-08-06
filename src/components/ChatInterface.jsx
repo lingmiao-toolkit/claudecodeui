@@ -1098,7 +1098,7 @@ const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
 // - onReplaceTemporarySession: Called to replace temporary session ID with real WebSocket session ID
 //
 // This ensures uninterrupted chat experience by pausing sidebar refreshes during conversations.
-function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter }) {
+function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter, config, activeTab }) {
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return safeLocalStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -1118,7 +1118,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [sessionMessages, setSessionMessages] = useState([]);
   const [isLoadingSessionMessages, setIsLoadingSessionMessages] = useState(false);
   const [isSystemSessionChange, setIsSystemSessionChange] = useState(false);
-  const [permissionMode, setPermissionMode] = useState('default');
+  // Chat页面独立的permission mode状态，只在启动时如果CCUI_DEFAULT_SHELL=true才默认设置为bypass
+  const [permissionMode, setPermissionMode] = useState(() => {
+    return (config?.defaultShell && selectedProject) ? 'bypassPermissions' : 'default';
+  });
   const [attachedImages, setAttachedImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(new Map());
   const [imageErrors, setImageErrors] = useState(new Map());
@@ -1344,6 +1347,25 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       setIsUserScrolledUp(!nearBottom);
     }
   }, [isNearBottom]);
+
+  // Handle config changes for default shell mode (Chat页面独立管理，不受Shell标签页影响)
+  useEffect(() => {
+    console.log('🔍 [DEBUG] ChatInterface config/project change:', {
+      hasConfig: !!config,
+      defaultShell: config?.defaultShell,
+      hasSelectedProject: !!selectedProject,
+      currentPermissionMode: permissionMode
+    });
+    
+    // 只在初始化时如果CCUI_DEFAULT_SHELL=true才设置为bypass，之后用户可以自由切换
+    if (config?.defaultShell && selectedProject && permissionMode === 'default') {
+      console.log('🛡️ [DEBUG] Setting initial permission mode to bypassPermissions due to CCUI_DEFAULT_SHELL');
+      setPermissionMode('bypassPermissions');
+    }
+    
+    // Always log current permission mode for debugging
+    console.log('🛡️ [DEBUG] Chat permission mode:', permissionMode);
+  }, [config, selectedProject]);
 
   useEffect(() => {
     // Load session messages when session changes

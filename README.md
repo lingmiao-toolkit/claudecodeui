@@ -50,33 +50,57 @@ A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/cla
 
 ### Installation
 
-1. **Clone the repository:**
+#### 🚀 方法1: NPM 全局安装 (推荐)
+
+1. **下载发布包:**
+```bash
+# 从 releases 页面下载 claude-code-ui-v1.5.0.tgz
+# 或从项目构建: npm run package
+```
+
+2. **全局安装:**
+```bash
+npm install -g claude-code-ui-v1.5.0.tgz
+```
+
+3. **启动使用:**
+```bash
+ccui                    # 默认启动 (端口 3000)
+ccui --port 8080        # 指定端口
+ccui --help             # 查看帮助
+```
+
+4. **访问应用:**
+   - 浏览器打开: `http://localhost:3000`
+
+#### 🛠️ 方法2: 开发模式安装
+
+1. **克隆仓库:**
 ```bash
 git clone https://github.com/siteboon/claudecodeui.git
 cd claudecodeui
 ```
 
-2. **Install dependencies:**
+2. **安装依赖:**
 ```bash
 npm install
 ```
 
-3. **Configure environment:**
+3. **配置环境 (可选):**
 ```bash
 cp .env.example .env
-# Edit .env with your preferred settings
+# 编辑 .env 设置您的偏好
 ```
 
-4. **Start the application:**
+4. **启动开发服务:**
 ```bash
-# Development mode (with hot reload)
-npm run dev
-
+npm run dev             # 开发模式 (热重载)
+npm start               # 生产模式
 ```
-The application will start at the port you specified in your .env
 
-5. **Open your browser:**
-   - Development: `http://localhost:3001`
+5. **访问应用:**
+   - 开发模式: `http://localhost:3001`
+   - 生产模式: `http://localhost:3000`
 
 ## Security & Tools Configuration
 
@@ -191,6 +215,41 @@ We welcome contributions! Please follow these guidelines:
 - **Documentation** - Improve guides and API docs
 - **UI/UX improvements** - Better user experience
 - **Performance optimizations** - Make it faster
+
+## Global Command Usage
+
+如果您通过npm全局安装了Claude Code UI，您可以使用以下命令：
+
+### 基本命令
+```bash
+ccui                    # 启动服务 (默认端口 3000)
+ccui --help             # 显示帮助信息
+ccui --version          # 显示版本信息
+ccui --config           # 显示配置信息
+```
+
+### 自定义选项
+```bash
+ccui --port 8080        # 指定端口启动
+ccui --workspace ~/dev  # 指定工作目录
+ccui --stop             # 显示停止服务的方法
+```
+
+### 环境变量支持
+```bash
+export PORT=8080                    # 自定义端口
+export CCUI_WORK_DIR=~/projects     # 默认工作目录
+export CCUI_DEFAULT_SHELL=true      # 启动时切换到Shell
+export CCUI_SINGLE_PROJECT=true     # 禁用新建项目
+export OPENAI_API_KEY=your_key      # OpenAI API Key (语音转录)
+
+ccui  # 使用环境变量配置启动
+```
+
+### 卸载
+```bash
+npm uninstall -g claude-code-ui
+```
 
 ## Troubleshooting
 

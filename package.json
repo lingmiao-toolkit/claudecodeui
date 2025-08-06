@@ -4,13 +4,21 @@
   "description": "A web-based UI for Claude Code CLI",
   "type": "module",
   "main": "server/index.js",
+  "bin": {
+    "ccui": "./bin/ccui.js",
+    "claude-code-ui": "./bin/ccui.js"
+  },
+  "preferGlobal": true,
   "scripts": {
     "dev": "concurrently --kill-others \"npm run server\" \"npm run client\"",
     "server": "node server/index.js",
     "client": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npm run build && npm run server"
+    "start": "npm run build && npm run server",
+    "package": "bash scripts/package.sh",
+    "install-production": "npm install --omit=dev",
+    "postinstall": "node bin/postinstall.js"
   },
   "keywords": [
     "claude",

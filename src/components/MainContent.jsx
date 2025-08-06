@@ -41,7 +41,8 @@ function MainContent({
   autoExpandTools,        // Auto-expand tool accordions
   showRawParameters,      // Show raw parameters in tool accordions
   autoScrollToBottom,     // Auto-scroll to bottom when new messages arrive
-  sendByCtrlEnter         // Send by Ctrl+Enter mode for East Asian language input
+  sendByCtrlEnter,        // Send by Ctrl+Enter mode for East Asian language input
+  config                  // Configuration object with environment variable settings
 }) {
   const [editingFile, setEditingFile] = useState(null);
 
@@ -289,6 +290,8 @@ function MainContent({
               showRawParameters={showRawParameters}
               autoScrollToBottom={autoScrollToBottom}
               sendByCtrlEnter={sendByCtrlEnter}
+              config={config}
+              activeTab={activeTab}
             />
           </ErrorBoundary>
         </div>
@@ -300,6 +303,7 @@ function MainContent({
             selectedProject={selectedProject} 
             selectedSession={selectedSession}
             isActive={activeTab === 'shell'}
+            config={config}
           />
         </div>
         <div className={`h-full overflow-hidden ${activeTab === 'git' ? 'block' : 'hidden'}`}>

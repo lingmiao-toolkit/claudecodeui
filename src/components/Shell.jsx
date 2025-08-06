@@ -29,7 +29,7 @@ if (typeof document !== 'undefined') {
 // Global store for shell sessions to persist across tab switches
 const shellSessions = new Map();
 
-function Shell({ selectedProject, selectedSession, isActive }) {
+function Shell({ selectedProject, selectedSession, isActive, config }) {
   const terminalRef = useRef(null);
   const terminal = useRef(null);
   const fitAddon = useRef(null);
@@ -377,6 +377,27 @@ function Shell({ selectedProject, selectedSession, isActive }) {
     }, 100);
   }, [isActive, isInitialized]);
 
+  // Auto-connect when CCUI_DEFAULT_SHELL is enabled
+  useEffect(() => {
+    console.log('🔍 [DEBUG] Shell auto-connect check:', {
+      hasConfig: !!config,
+      defaultShell: config?.defaultShell,
+      isActive: isActive,
+      hasSelectedProject: !!selectedProject,
+      isInitialized: isInitialized,
+      isConnected: isConnected,
+      isConnecting: isConnecting
+    });
+
+    if (config?.defaultShell && isActive && selectedProject && isInitialized && !isConnected && !isConnecting) {
+      console.log('🚀 [DEBUG] Auto-connecting to shell for project:', selectedProject.name);
+      // Add a small delay to ensure the tab is fully activated
+      setTimeout(() => {
+        connectToShell();
+      }, 500);
+    }
+  }, [config, isActive, selectedProject, isInitialized, isConnected, isConnecting]);
+
   // WebSocket connection function (called manually)
   const connectWebSocket = async () => {
     if (isConnecting || isConnected) return;
@@ -544,6 +565,14 @@ function Shell({ selectedProject, selectedSession, isActive }) {
             {isRestarting && (
               <span className="text-xs text-blue-400">(Restarting...)</span>
             )}
+            
+            {/* Permission Mode Indicator - Shell页面固定为Bypass Permissions */}
+            <div className="px-2 py-1 rounded text-xs font-medium border bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-600">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                <span>Bypass Permissions</span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center space-x-3">
             {isConnected && (
