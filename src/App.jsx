@@ -47,6 +47,7 @@ function AppContent() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'files'
   const [config, setConfig] = useState(null);
+  // Chat页面有自己独立的permission mode，Shell页面固定为bypass permissions
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);

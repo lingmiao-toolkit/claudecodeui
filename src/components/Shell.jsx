@@ -565,6 +565,14 @@ function Shell({ selectedProject, selectedSession, isActive, config }) {
             {isRestarting && (
               <span className="text-xs text-blue-400">(Restarting...)</span>
             )}
+            
+            {/* Permission Mode Indicator - Shell页面固定为Bypass Permissions */}
+            <div className="px-2 py-1 rounded text-xs font-medium border bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-600">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                <span>Bypass Permissions</span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center space-x-3">
             {isConnected && (

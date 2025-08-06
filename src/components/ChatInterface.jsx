@@ -1118,8 +1118,8 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [sessionMessages, setSessionMessages] = useState([]);
   const [isLoadingSessionMessages, setIsLoadingSessionMessages] = useState(false);
   const [isSystemSessionChange, setIsSystemSessionChange] = useState(false);
+  // Chat页面独立的permission mode状态，只在启动时如果CCUI_DEFAULT_SHELL=true才默认设置为bypass
   const [permissionMode, setPermissionMode] = useState(() => {
-    // Set default permission mode based on config
     return (config?.defaultShell && selectedProject) ? 'bypassPermissions' : 'default';
   });
   const [attachedImages, setAttachedImages] = useState([]);
@@ -1348,35 +1348,24 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, [isNearBottom]);
 
-  // Handle config changes for default shell mode and shell tab activation
+  // Handle config changes for default shell mode (Chat页面独立管理，不受Shell标签页影响)
   useEffect(() => {
-    console.log('🔍 [DEBUG] ChatInterface config/project/tab change:', {
+    console.log('🔍 [DEBUG] ChatInterface config/project change:', {
       hasConfig: !!config,
       defaultShell: config?.defaultShell,
       hasSelectedProject: !!selectedProject,
-      activeTab: activeTab,
       currentPermissionMode: permissionMode
     });
     
-    // Set bypass permissions if:
-    // 1. CCUI_DEFAULT_SHELL is enabled and we have a project, OR
-    // 2. User is currently on the shell tab
-    const shouldBypassPermissions = (config?.defaultShell && selectedProject) || (activeTab === 'shell');
-    
-    if (shouldBypassPermissions && permissionMode !== 'bypassPermissions') {
-      console.log('🛡️ [DEBUG] Setting permission mode to bypassPermissions due to:', {
-        defaultShellEnabled: config?.defaultShell && selectedProject,
-        onShellTab: activeTab === 'shell'
-      });
+    // 只在初始化时如果CCUI_DEFAULT_SHELL=true才设置为bypass，之后用户可以自由切换
+    if (config?.defaultShell && selectedProject && permissionMode === 'default') {
+      console.log('🛡️ [DEBUG] Setting initial permission mode to bypassPermissions due to CCUI_DEFAULT_SHELL');
       setPermissionMode('bypassPermissions');
-    } else if (!shouldBypassPermissions && permissionMode === 'bypassPermissions') {
-      // Reset to default when leaving shell context (unless CCUI_DEFAULT_SHELL is enabled)
-      if (!config?.defaultShell) {
-        console.log('🛡️ [DEBUG] Resetting permission mode to default (left shell context)');
-        setPermissionMode('default');
-      }
     }
-  }, [config, selectedProject, activeTab, permissionMode]);
+    
+    // Always log current permission mode for debugging
+    console.log('🛡️ [DEBUG] Chat permission mode:', permissionMode);
+  }, [config, selectedProject]);
 
   useEffect(() => {
     // Load session messages when session changes
