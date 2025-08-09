@@ -144,23 +144,30 @@ const app = express();
 const server = http.createServer(app);
 
 // Single WebSocket server that handles both paths
-const wss = new WebSocketServer({ 
+const wss = new WebSocketServer({
   server,
   verifyClient: (info) => {
     console.log('WebSocket connection attempt to:', info.req.url);
-    
+
+    // Check if authentication is disabled
+    if (process.env.DISABLE_AUTH === 'true') {
+      console.log('🔓 WebSocket authentication disabled - allowing anonymous connection');
+      info.req.user = { userId: 1, username: 'anonymous' };
+      return true;
+    }
+
     // Extract token from query parameters or headers
     const url = new URL(info.req.url, 'http://localhost');
-    const token = url.searchParams.get('token') || 
+    const token = url.searchParams.get('token') ||
                   info.req.headers.authorization?.split(' ')[1];
-    
+
     // Verify token
     const user = authenticateWebSocket(token);
     if (!user) {
       console.log('❌ WebSocket authentication failed');
       return false;
     }
-    
+
     // Store user info in the request for later use
     info.req.user = user;
     console.log('✅ WebSocket authenticated for user:', user.username);

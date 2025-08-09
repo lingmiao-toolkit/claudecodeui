@@ -30,6 +30,12 @@ const ProtectedRoute = ({ children }) => {
     return <LoadingScreen />;
   }
 
+  // If authentication is disabled, user will be set to anonymous automatically
+  // by AuthContext, so we can proceed directly to the app
+  if (user && user.username === 'anonymous') {
+    return children;
+  }
+
   if (needsSetup) {
     return <SetupForm />;
   }

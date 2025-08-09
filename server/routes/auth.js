@@ -8,10 +8,21 @@ const router = express.Router();
 // Check auth status and setup requirements
 router.get('/status', async (req, res) => {
   try {
+    // Check if authentication is disabled
+    if (process.env.DISABLE_AUTH === 'true') {
+      return res.json({
+        needsSetup: false,
+        isAuthenticated: true,
+        authDisabled: true,
+        user: { id: 1, username: 'anonymous' }
+      });
+    }
+
     const hasUsers = await userDb.hasUsers();
-    res.json({ 
+    res.json({
       needsSetup: !hasUsers,
-      isAuthenticated: false // Will be overridden by frontend if token exists
+      isAuthenticated: false, // Will be overridden by frontend if token exists
+      authDisabled: false
     });
   } catch (error) {
     console.error('Auth status error:', error);

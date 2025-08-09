@@ -36,22 +36,33 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Check if system needs setup
       const statusResponse = await api.auth.status();
       const statusData = await statusResponse.json();
-      
+
+      // Check if authentication is disabled
+      if (statusData.authDisabled) {
+        console.log('🔓 Authentication disabled - using anonymous mode');
+        setUser(statusData.user || { id: 1, username: 'anonymous' });
+        setNeedsSetup(false);
+        setToken('anonymous-token'); // Set a dummy token for API calls
+        localStorage.setItem('auth-token', 'anonymous-token');
+        setIsLoading(false);
+        return;
+      }
+
       if (statusData.needsSetup) {
         setNeedsSetup(true);
         setIsLoading(false);
         return;
       }
-      
+
       // If we have a token, verify it
-      if (token) {
+      if (token && token !== 'anonymous-token') {
         try {
           const userResponse = await api.auth.user();
-          
+
           if (userResponse.ok) {
             const userData = await userResponse.json();
             setUser(userData.user);
