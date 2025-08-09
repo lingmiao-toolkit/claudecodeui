@@ -11,8 +11,12 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port: parseInt(env.VITE_PORT) || 3001,
       proxy: {
-        '/api': `http://localhost:${env.PORT || 3002}`,
+        '/api': `http://localhost:${env.PORT || 3001}`,
         '/ws': {
+          target: `ws://localhost:${env.PORT || 3001}`,
+          ws: true
+        },
+        '/shell': {
           target: `ws://localhost:${env.PORT || 3002}`,
           ws: true
         }
