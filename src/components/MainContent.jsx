@@ -46,6 +46,9 @@ function MainContent({
 }) {
   const [editingFile, setEditingFile] = useState(null);
   const [feedbackPort, setFeedbackPort] = useState(null);
+  const [feedbackError, setFeedbackError] = useState(null);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(false);
 
   const handleFileOpen = (filePath, diffInfo = null) => {
     // Create a file object that CodeEditor expects
@@ -65,11 +68,21 @@ function MainContent({
   // 读取反馈端口号
   useEffect(() => {
     const loadFeedbackPort = async () => {
-      if (!selectedProject) return;
+      if (!selectedProject) {
+        setFeedbackPort(null);
+        setFeedbackError(null);
+        return;
+      }
       
       try {
         const token = localStorage.getItem('auth-token');
-        const response = await fetch(`/api/projects/${selectedProject.name}/file?filePath=${encodeURIComponent('.claude/feedback.pid')}`, {
+        // 构建绝对路径：项目路径 + 相对路径
+        const absolutePath = `${selectedProject.path}/.claude/feedback.pid`;
+        const apiUrl = `/api/projects/${selectedProject.name}/file?filePath=${encodeURIComponent(absolutePath)}`;
+        console.log('📍 Full API URL:', apiUrl);
+        console.log('📍 Absolute path:', absolutePath);
+        
+        const response = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -79,13 +92,24 @@ function MainContent({
         if (response.ok) {
           const data = await response.json();
           const port = data.content.trim().replace(/%$/, ''); // 移除末尾的%符号
+          
           if (port && !isNaN(port)) {
             setFeedbackPort(port);
+            setFeedbackError(null);
+            // 重置iframe状态
+            setIframeError(false);
+            setIframeLoading(true);
+          } else {
+            setFeedbackPort(null);
+            setFeedbackError('端口号格式无效');
           }
+        } else {
+          setFeedbackPort(null);
+          setFeedbackError('未找到 .claude/feedback.pid 文件');
         }
       } catch (error) {
-        // Feedback file not found or error reading it
-        console.log('No feedback.pid file found');
+        setFeedbackPort(null);
+        setFeedbackError('读取反馈配置文件失败');
       }
     };
 
@@ -280,7 +304,7 @@ function MainContent({
                   <span className="hidden sm:inline">GIT管理</span>
                 </span>
               </button>
-              {feedbackPort && (
+              {selectedProject && (
                 <button
                   onClick={() => setActiveTab('feedback')}
                   className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
@@ -357,16 +381,144 @@ function MainContent({
         <div className={`h-full overflow-hidden ${activeTab === 'git' ? 'block' : 'hidden'}`}>
           <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
         </div>
-        {feedbackPort && (
+        {selectedProject && (
           <div className={`h-full overflow-hidden ${activeTab === 'feedback' ? 'block' : 'hidden'}`}>
             <div className="h-full flex flex-col">
               <div className="flex-1">
-                <iframe
-                  src={`http://127.0.0.1:${feedbackPort}`}
-                  className="w-full h-full border-0"
-                  title="反馈系统"
-                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                />
+                {feedbackPort ? (
+                  <div className="relative w-full h-full">
+                    {iframeLoading && (
+                      <div className="absolute inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-10">
+                        <div className="text-center">
+                          <div className="w-12 h-12 mx-auto mb-4">
+                            <div 
+                              className="w-full h-full rounded-full border-4 border-gray-200 border-t-blue-500" 
+                              style={{ 
+                                animation: 'spin 1s linear infinite',
+                                WebkitAnimation: 'spin 1s linear infinite',
+                                MozAnimation: 'spin 1s linear infinite'
+                              }} 
+                            />
+                          </div>
+                          <p className="text-gray-600 dark:text-gray-300">正在加载反馈系统...</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {iframeError ? (
+                      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                        <div className="text-center max-w-md mx-auto px-6">
+                          <div className="w-16 h-16 mx-auto mb-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                          </div>
+                          <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">反馈系统连接失败</h2>
+                          <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                            无法连接到反馈系统服务 (端口: {feedbackPort})。请检查服务是否正在运行。
+                          </p>
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => {
+                                setIframeError(false);
+                                setIframeLoading(true);
+                                // 重新加载iframe
+                                const iframe = document.querySelector('#feedback-iframe');
+                                if (iframe) {
+                                  iframe.src = iframe.src;
+                                }
+                              }}
+                              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              🔄 重新连接
+                            </button>
+                            <button
+                              onClick={() => {
+                                const url = `http://127.0.0.1:${feedbackPort}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                              🔗 在新窗口打开
+                            </button>
+                          </div>
+                          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                            目标地址: <code>http://127.0.0.1:{feedbackPort}</code>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <iframe
+                        id="feedback-iframe"
+                        src={`http://127.0.0.1:${feedbackPort}`}
+                        className="w-full h-full border-0"
+                        title="反馈系统"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                        onLoad={(e) => {
+                          // 检查iframe是否真的加载成功（不是错误页面）
+                          setTimeout(() => {
+                            try {
+                              const iframe = e.target;
+                              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                              // 如果能访问到文档且标题不是浏览器错误页面
+                              if (iframeDoc && !iframeDoc.title.includes('无法访问') && !iframeDoc.title.includes('错误')) {
+                                setIframeLoading(false);
+                                setIframeError(false);
+                              } else {
+                                setIframeLoading(false);
+                                setIframeError(true);
+                              }
+                            } catch (error) {
+                              // 由于同源策略，可能无法访问iframe内容，这是正常的
+                              // 如果无法访问，说明页面加载成功（不同源）
+                              setIframeLoading(false);
+                              setIframeError(false);
+                            }
+                          }, 500);
+                        }}
+                        onError={() => {
+                          setIframeLoading(false);
+                          setIframeError(true);
+                        }}
+                        ref={(iframe) => {
+                          if (iframe && iframeLoading) {
+                            // 设置10秒超时
+                            const timeoutId = setTimeout(() => {
+                              if (iframeLoading) {
+                                setIframeLoading(false);
+                                setIframeError(true);
+                              }
+                            }, 10000);
+                            
+                            // 清理之前的超时
+                            iframe.timeoutId = timeoutId;
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                    <div className="text-center max-w-md mx-auto px-6">
+                      <div className="w-16 h-16 mx-auto mb-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </div>
+                      <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">反馈系统未配置</h2>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+                        {feedbackError || '在项目根目录创建 .claude/feedback.pid 文件，并在其中写入反馈服务的端口号。'}
+                      </p>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          💡 <strong>配置方法：</strong><br/>
+                          1. 在项目根目录创建 <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">.claude/feedback.pid</code> 文件<br/>
+                          2. 在文件中写入端口号，如：<code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">8080</code>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
