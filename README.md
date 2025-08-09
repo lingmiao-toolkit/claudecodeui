@@ -263,6 +263,15 @@ npm uninstall -g claude-code-ui
 - Verify `~/.claude/projects/` directory exists and has proper permissions
 d
 
+#### Cannot Access localhost
+**Problem**: `http://localhost:3000` doesn't work, connection refused or timeout
+**Solutions**:
+- **Use IP address instead**: Try `http://127.0.0.1:3000` (recommended)
+- **Check DNS resolution**: Run `ping localhost` to verify DNS works
+- **Verify hosts file**: Ensure `/etc/hosts` contains `127.0.0.1 localhost`
+- **Try different port**: Use `ccui --port 3001` and access `http://127.0.0.1:3001`
+- **Check firewall**: Temporarily disable firewall/antivirus to test
+
 #### File Explorer Issues
 **Problem**: Files not loading, permission errors, empty directories
 **Solutions**:

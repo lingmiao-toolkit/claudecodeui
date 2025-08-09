@@ -20,6 +20,18 @@ const validateApiKey = (req, res, next) => {
 
 // JWT authentication middleware
 const authenticateToken = async (req, res, next) => {
+  // Check if authentication is disabled
+  if (process.env.DISABLE_AUTH === 'true') {
+    // Create a default anonymous user for the request
+    req.user = {
+      id: 1,
+      username: 'anonymous',
+      created_at: new Date().toISOString(),
+      last_login: new Date().toISOString()
+    };
+    return next();
+  }
+
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -29,13 +41,13 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
     // Verify user still exists and is active
     const user = userDb.getUserById(decoded.userId);
     if (!user) {
       return res.status(401).json({ error: 'Invalid token. User not found.' });
     }
-    
+
     req.user = user;
     next();
   } catch (error) {
@@ -58,10 +70,19 @@ const generateToken = (user) => {
 
 // WebSocket authentication function
 const authenticateWebSocket = (token) => {
+  // Check if authentication is disabled
+  if (process.env.DISABLE_AUTH === 'true') {
+    // Return a default anonymous user for WebSocket connections
+    return {
+      userId: 1,
+      username: 'anonymous'
+    };
+  }
+
   if (!token) {
     return null;
   }
-  
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     return decoded;

@@ -61,6 +61,7 @@ ${colors.white}示例:${colors.reset}
   
 ${colors.white}访问地址:${colors.reset}
   http://localhost:3000        (或指定的端口)
+  http://127.0.0.1:3000        (如果 localhost 无法访问)
 
 ${colors.white}更多信息:${colors.reset}
   GitHub: https://github.com/claude-ai/claude-code-ui
@@ -169,8 +170,11 @@ async function startServer(options = {}) {
   
   console.log(''); // 空行
   log.success('正在启动服务器...');
-  console.log(`${colors.cyan}🌐 访问地址: http://localhost:${port}${colors.reset}`);
+  console.log(`${colors.cyan}🌐 访问地址:${colors.reset}`);
+  console.log(`   • http://localhost:${port}`);
+  console.log(`   • http://127.0.0.1:${port} ${colors.green}(推荐，避免DNS问题)${colors.reset}`);
   console.log(`${colors.yellow}💡 按 Ctrl+C 停止服务${colors.reset}`);
+  console.log(`${colors.yellow}💡 如果 localhost 无法访问，请使用 127.0.0.1${colors.reset}`);
   console.log(''); // 空行
   
   // 启动子进程
