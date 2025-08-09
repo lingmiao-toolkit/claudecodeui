@@ -15,16 +15,23 @@ export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first
     const savedTheme = localStorage.getItem('theme');
+    const themeVersion = localStorage.getItem('theme-version');
+    const THEME_VERSION = '2.0';
+    
+    // 如果没有版本号或版本号不匹配，使用新的默认值（深色模式）
+    if (!themeVersion || themeVersion !== THEME_VERSION) {
+      console.log('Theme version updated, applying dark mode as default');
+      localStorage.setItem('theme-version', THEME_VERSION);
+      localStorage.setItem('theme', 'dark');
+      return true;
+    }
+    
     if (savedTheme) {
       return savedTheme === 'dark';
     }
     
-    // Check system preference
-    if (window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    
-    return false;
+    // Default to dark mode
+    return true;
   });
 
   // Update document class and localStorage when theme changes
@@ -32,6 +39,7 @@ export const ThemeProvider = ({ children }) => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
+      localStorage.setItem('theme-version', '2.0');
       
       // Update iOS status bar style and theme color for dark mode
       const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
@@ -46,6 +54,7 @@ export const ThemeProvider = ({ children }) => {
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
+      localStorage.setItem('theme-version', '2.0');
       
       // Update iOS status bar style and theme color for light mode
       const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');

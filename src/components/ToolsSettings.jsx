@@ -278,19 +278,32 @@ function ToolsSettings({ isOpen, onClose }) {
       
       // Load from localStorage
       const savedSettings = localStorage.getItem('claude-tools-settings');
+      const SETTINGS_VERSION = '2.0'; // 增加设置版本号
       
       if (savedSettings) {
         const settings = JSON.parse(savedSettings);
-        setAllowedTools(settings.allowedTools || []);
-        setDisallowedTools(settings.disallowedTools || []);
-        setSkipPermissions(settings.skipPermissions || false);
-        setProjectSortOrder(settings.projectSortOrder || 'name');
+        
+        // 检查设置版本，如果版本不匹配则使用新默认值
+        if (settings.version !== SETTINGS_VERSION) {
+          console.log('Settings version updated, applying new defaults');
+          // 应用新的默认值
+          setAllowedTools(settings.allowedTools || []);
+          setDisallowedTools(settings.disallowedTools || []);
+          setSkipPermissions(true); // 强制设为true（新默认值）
+          setProjectSortOrder('date'); // 强制设为date（新默认值）
+        } else {
+          // 使用保存的设置
+          setAllowedTools(settings.allowedTools || []);
+          setDisallowedTools(settings.disallowedTools || []);
+          setSkipPermissions(settings.skipPermissions !== undefined ? settings.skipPermissions : true);
+          setProjectSortOrder(settings.projectSortOrder || 'date');
+        }
       } else {
         // Set defaults
         setAllowedTools([]);
         setDisallowedTools([]);
-        setSkipPermissions(false);
-        setProjectSortOrder('name');
+        setSkipPermissions(true);
+        setProjectSortOrder('date');
       }
 
       // Load MCP servers from API
@@ -300,8 +313,8 @@ function ToolsSettings({ isOpen, onClose }) {
       // Set defaults on error
       setAllowedTools([]);
       setDisallowedTools([]);
-      setSkipPermissions(false);
-      setProjectSortOrder('name');
+      setSkipPermissions(true);
+      setProjectSortOrder('date');
     }
   };
 
@@ -311,6 +324,7 @@ function ToolsSettings({ isOpen, onClose }) {
     
     try {
       const settings = {
+        version: '2.0', // 添加版本号
         allowedTools,
         disallowedTools,
         skipPermissions,
@@ -332,6 +346,29 @@ function ToolsSettings({ isOpen, onClose }) {
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const resetToDefaults = () => {
+    if (confirm('确定要重置所有设置为默认值吗？这将会：\n- 启用跳过权限提示\n- 设置项目排序为最近活动\n- 清除已配置的工具列表\n- 但保留MCP服务器配置')) {
+      setAllowedTools([]);
+      setDisallowedTools([]);
+      setSkipPermissions(true);
+      setProjectSortOrder('date');
+      
+      // 立即保存新的默认设置
+      const settings = {
+        version: '2.0',
+        allowedTools: [],
+        disallowedTools: [],
+        skipPermissions: true,
+        projectSortOrder: 'date',
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('claude-tools-settings', JSON.stringify(settings));
+      
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus(null), 3000);
     }
   };
 
@@ -579,7 +616,7 @@ function ToolsSettings({ isOpen, onClose }) {
             <span
               className={`${
                 isDarkMode ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
+              } h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
             >
               {isDarkMode ? (
                 <Moon className="w-3.5 h-3.5 text-gray-700" />
@@ -1257,6 +1294,15 @@ function ToolsSettings({ isOpen, onClose }) {
             )}
           </div>
           <div className="flex items-center gap-3 order-1 sm:order-2">
+            <Button 
+              variant="outline" 
+              onClick={resetToDefaults}
+              disabled={isSaving}
+              className="flex-1 sm:flex-none h-10 touch-manipulation text-orange-600 border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+              title="重置为新的默认设置"
+            >
+              重置默认值
+            </Button>
             <Button 
               variant="outline" 
               onClick={onClose} 

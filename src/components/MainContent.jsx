@@ -45,6 +45,7 @@ function MainContent({
   config                  // Configuration object with environment variable settings
 }) {
   const [editingFile, setEditingFile] = useState(null);
+  const [feedbackPort, setFeedbackPort] = useState(null);
 
   const handleFileOpen = (filePath, diffInfo = null) => {
     // Create a file object that CodeEditor expects
@@ -60,6 +61,36 @@ function MainContent({
   const handleCloseEditor = () => {
     setEditingFile(null);
   };
+
+  // 读取反馈端口号
+  useEffect(() => {
+    const loadFeedbackPort = async () => {
+      if (!selectedProject) return;
+      
+      try {
+        const token = localStorage.getItem('auth-token');
+        const response = await fetch(`/api/projects/${selectedProject.name}/file?filePath=${encodeURIComponent('.claude/feedback.pid')}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const port = data.content.trim().replace(/%$/, ''); // 移除末尾的%符号
+          if (port && !isNaN(port)) {
+            setFeedbackPort(port);
+          }
+        }
+      } catch (error) {
+        // Feedback file not found or error reading it
+        console.log('No feedback.pid file found');
+      }
+    };
+
+    loadFeedbackPort();
+  }, [selectedProject]);
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
@@ -176,7 +207,7 @@ function MainContent({
               ) : (
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                    {activeTab === 'files' ? 'Project Files' : activeTab === 'git' ? 'Source Control' : 'Project'}
+                    {activeTab === 'files' ? '项目文件' : activeTab === 'git' ? 'GIT管理' : activeTab === 'feedback' ? '反馈' : '项目'}
                   </h2>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {selectedProject.displayName}
@@ -201,7 +232,7 @@ function MainContent({
                   <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <span className="hidden sm:inline">Chat</span>
+                  <span className="hidden sm:inline">对话</span>
                 </span>
               </button>
               <button
@@ -216,7 +247,7 @@ function MainContent({
                   <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  <span className="hidden sm:inline">Shell</span>
+                  <span className="hidden sm:inline">终端</span>
                 </span>
               </button>
               <button
@@ -231,7 +262,7 @@ function MainContent({
                   <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z" />
                   </svg>
-                  <span className="hidden sm:inline">Files</span>
+                  <span className="hidden sm:inline">文件</span>
                 </span>
               </button>
               <button
@@ -246,9 +277,26 @@ function MainContent({
                   <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span className="hidden sm:inline">Source Control</span>
+                  <span className="hidden sm:inline">GIT管理</span>
                 </span>
               </button>
+              {feedbackPort && (
+                <button
+                  onClick={() => setActiveTab('feedback')}
+                  className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
+                    activeTab === 'feedback'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1 sm:gap-1.5">
+                    <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="hidden sm:inline">反馈</span>
+                  </span>
+                </button>
+              )}
                {/* <button
                 onClick={() => setActiveTab('preview')}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
@@ -309,6 +357,20 @@ function MainContent({
         <div className={`h-full overflow-hidden ${activeTab === 'git' ? 'block' : 'hidden'}`}>
           <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
         </div>
+        {feedbackPort && (
+          <div className={`h-full overflow-hidden ${activeTab === 'feedback' ? 'block' : 'hidden'}`}>
+            <div className="h-full flex flex-col">
+              <div className="flex-1">
+                <iframe
+                  src={`http://127.0.0.1:${feedbackPort}`}
+                  className="w-full h-full border-0"
+                  title="反馈系统"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                />
+              </div>
+            </div>
+          </div>
+        )}
         <div className={`h-full overflow-hidden ${activeTab === 'preview' ? 'block' : 'hidden'}`}>
           {/* <LivePreviewPanel
             selectedProject={selectedProject}
