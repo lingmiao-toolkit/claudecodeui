@@ -115,6 +115,29 @@ function MainContent({
 
     loadFeedbackPort();
   }, [selectedProject]);
+
+  // 清理定时器的useEffect
+  useEffect(() => {
+    // 当feedbackPort变化时，清理之前的定时器
+    return () => {
+      const iframe = document.querySelector('#feedback-iframe');
+      if (iframe && iframe.timeoutId) {
+        clearTimeout(iframe.timeoutId);
+        iframe.timeoutId = null;
+      }
+    };
+  }, [feedbackPort]);
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      const iframe = document.querySelector('#feedback-iframe');
+      if (iframe && iframe.timeoutId) {
+        clearTimeout(iframe.timeoutId);
+        iframe.timeoutId = null;
+      }
+    };
+  }, []);
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
@@ -459,6 +482,13 @@ function MainContent({
                           setTimeout(() => {
                             try {
                               const iframe = e.target;
+
+                              // 清理超时定时器，因为iframe已经加载完成
+                              if (iframe.timeoutId) {
+                                clearTimeout(iframe.timeoutId);
+                                iframe.timeoutId = null;
+                              }
+
                               const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                               // 如果能访问到文档且标题不是浏览器错误页面
                               if (iframeDoc && !iframeDoc.title.includes('无法访问') && !iframeDoc.title.includes('错误')) {
@@ -471,10 +501,18 @@ function MainContent({
                             } catch (error) {
                               // 由于同源策略，可能无法访问iframe内容，这是正常的
                               // 如果无法访问，说明页面加载成功（不同源）
+                              const iframe = e.target;
+
+                              // 清理超时定时器
+                              if (iframe.timeoutId) {
+                                clearTimeout(iframe.timeoutId);
+                                iframe.timeoutId = null;
+                              }
+
                               setIframeLoading(false);
                               setIframeError(false);
                             }
-                          }, 500);
+                          }, 1000); // 增加延迟时间到1秒，提高检测可靠性
                         }}
                         onError={() => {
                           setIframeLoading(false);
@@ -482,6 +520,11 @@ function MainContent({
                         }}
                         ref={(iframe) => {
                           if (iframe && iframeLoading) {
+                            // 清理之前的超时定时器
+                            if (iframe.timeoutId) {
+                              clearTimeout(iframe.timeoutId);
+                            }
+
                             // 设置10秒超时
                             const timeoutId = setTimeout(() => {
                               if (iframeLoading) {
@@ -489,8 +532,8 @@ function MainContent({
                                 setIframeError(true);
                               }
                             }, 10000);
-                            
-                            // 清理之前的超时
+
+                            // 存储新的定时器ID
                             iframe.timeoutId = timeoutId;
                           }
                         }}
